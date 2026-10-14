@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package agridrone.telemetria;
+
+option java_package = "com.agridrone.telemetria";
+option java_multiple_files = true;
+option go_package = "agridrone/telemetria";
+
+// Geographic coordinates of the drone.
+message Coordinates {
+  double latitude = 1;   // decimal degrees (-90 to 90)
+  double longitude = 2;  // decimal degrees (-180 to 180)
+  double altitude = 3;   // meters above mean sea level
+  double heading = 4;    // compass bearing in degrees (0 to 360)
+}
+
+// Battery status of the drone.
+message Battery {
+  double level = 1;           // remaining charge percentage (0 to 100)
+  double voltage = 2;         // current voltage in volts
+  double current = 3;         // current draw in amperes (negative = charging)
+  double temperature = 4;     // battery temperature in celsius
+  int32 cycles = 5;           // number of full charge cycles
+  BatteryHealth health = 6;   // overall battery health indicator
+}
+
+// Health state of the battery.
+enum BatteryHealth {
+  BATTERY_HEALTH_UNSPECIFIED = 0;
+  BATTERY_HEALTH_GOOD = 1;
+  BATTERY_HEALTH_WARNING = 2;
+  BATTERY_HEALTH_CRITICAL = 3;
+}
+
+// Operational status of the drone.
+enum DroneStatus {
+  DRONE_STATUS_UNSPECIFIED = 0;
+  DRONE_STATUS_IDLE = 1;
+  DRONE_STATUS_TAKEOFF = 2;
+  DRONE_STATUS_FLYING = 3;
+  DRONE_STATUS_HOVERING = 4;
+  DRONE_STATUS_LANDING = 5;
+  DRONE_STATUS_RETURN_TO_BASE = 6;
+  DRONE_STATUS_EMERGENCY = 7;
+}
+
+// A single telemetry sample emitted by the drone.
+message TelemetryData {
+  string drone_id = 1;            // unique drone identifier
+  int64 timestamp = 2;            // epoch milliseconds
+  Coordinates coordinates = 3;    // current geographic position
+  Battery battery = 4;            // current battery status
+  DroneStatus status = 5;         // current operational status
+  double ground_speed = 6;        // speed in meters per second
+  double signal_strength = 7;     // radio signal in dBm
+  string mission_id = 8;          // active mission identifier, if any
+}
+
+// Command sent from the control station to the drone.
+message Command {
+  string drone_id = 1;          // target drone identifier
+  CommandType type = 2;         // command type
+  string payload = 3;           // JSON-encoded command parameters
+  int64 timestamp = 4;          // epoch milliseconds when issued
+  string command_id = 5;        // unique command identifier for ack tracking
+}
+
+// Type of command issued to a drone.
+enum CommandType {
+  COMMAND_TYPE_UNSPECIFIED = 0;
+  COMMAND_TYPE_TAKEOFF = 1;
+  COMMAND_TYPE_LAND = 2;
+  COMMAND_TYPE_RETURN_TO_BASE = 3;
+  COMMAND_TYPE_ADJUST_ALTITUDE = 4;
+  COMMAND_TYPE_EMERGENCY_STOP = 5;
+  COMMAND_TYPE_HOVER = 6;
+  COMMAND_TYPE_WAYPOINT = 7;
+}
+
+// Fleet monitoring service (MonitoreoFlota).
+// The drone (client) streams TelemetryData while the control station (server)
+// streams Commands back to the drone over the same bidirectional gRPC channel.
+service MonitoreoFlota {
+  rpc StreamTelemetry(stream TelemetryData) returns (stream Command);
+}
